@@ -1,0 +1,6 @@
+{
+  "name": "Yalla Muv TMS",
+  "description": "Yalla Muv Enterprise Logistics & Transport Management System (Jeddah, KSA)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
