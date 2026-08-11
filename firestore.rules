@@ -1,0 +1,55 @@
+rules_version = '2';
+
+// Trust model: there are no user accounts. A tracking session's document ID is a long
+// random token (see web/js/utils.js#generateSessionId) that is only ever handed to the
+// sender (via the dashboard) and the recipient (via the WhatsApp link). Anyone holding
+// that id can read the session and progress it through the fields listed below — the same
+// trust model as "anyone with this link" location-sharing links in other consumer apps.
+//
+// What this does NOT allow, for anyone, ever:
+//  - Listing/enumerating sessions (no `list`), so ids can't be guessed by scanning.
+//  - Deleting a session (no `delete`) — the dashboard "closes" a session instead, and a
+//    recipient can never destroy the sender's copy of the trip.
+//  - Changing the destination, label, or expiry after creation.
+//  - Writing after a session has expired.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /tracking_sessions/{sessionId} {
+      allow get: if true;
+      allow list: if false;
+      allow delete: if false;
+
+      allow create: if request.resource.data.keys().hasOnly(
+                        ['destination', 'label', 'createdAt', 'expiresAt', 'status', 'consentAt', 'location']
+                      )
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.consentAt == null
+                    && request.resource.data.location == null
+                    && request.resource.data.destination.lat is number
+                    && request.resource.data.destination.lng is number
+                    && request.resource.data.destination.lat > -90 && request.resource.data.destination.lat < 90
+                    && request.resource.data.destination.lng > -180 && request.resource.data.destination.lng < 180
+                    && request.resource.data.createdAt == request.time
+                    && request.resource.data.expiresAt is timestamp
+                    && request.resource.data.expiresAt > request.time
+                    && request.resource.data.expiresAt < request.time + duration.value(48, 'h');
+
+      allow update: if request.time < resource.data.expiresAt
+                    && request.resource.data.keys().hasOnly(
+                        ['destination', 'label', 'createdAt', 'expiresAt', 'status', 'consentAt', 'location']
+                      )
+                    // Immutable trip facts:
+                    && request.resource.data.destination == resource.data.destination
+                    && request.resource.data.label == resource.data.label
+                    && request.resource.data.createdAt == resource.data.createdAt
+                    && request.resource.data.expiresAt == resource.data.expiresAt
+                    && request.resource.data.status in ['pending', 'active', 'declined', 'closed', 'arrived']
+                    // A closed/declined trip cannot be reopened by anyone.
+                    && resource.data.status in ['pending', 'active']
+                    && (request.resource.data.location == null || (
+                          request.resource.data.location.lat is number &&
+                          request.resource.data.location.lng is number
+                        ));
+    }
+  }
+}

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yalla Muv Tracking — Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo">📍</div>
+    <div>
+      <h1>Live Tracking</h1>
+      <div class="sub">Set a destination, send a link, watch them arrive</div>
+    </div>
+  </header>
+
+  <main class="dashboard-layout">
+    <div style="display:flex; flex-direction:column; gap:14px;">
+      <section class="card">
+        <h2>1. Set the destination</h2>
+        <label for="dest-search">Search for an address</label>
+        <input type="text" id="dest-search" placeholder="e.g. King Abdulaziz Rd, Jeddah" autocomplete="off" />
+        <ul class="suggestions" id="dest-suggestions" hidden></ul>
+        <div class="empty-state" id="dest-hint">Or click/tap directly on the map to drop a pin.</div>
+        <div class="link-box" id="dest-chosen" hidden>
+          <span id="dest-label">—</span>
+        </div>
+
+        <label for="trip-label">Trip label (optional)</label>
+        <input type="text" id="trip-label" placeholder="e.g. Delivery to Ahmed" />
+
+        <label for="recipient-phone">Recipient's WhatsApp number (optional)</label>
+        <input type="tel" id="recipient-phone" placeholder="e.g. 9665XXXXXXXX (with country code)" />
+
+        <div class="btn-row">
+          <button class="btn-primary" id="generate-btn" disabled>Generate tracking link</button>
+        </div>
+      </section>
+
+      <section class="card" id="share-card" hidden>
+        <h2>2. Send it</h2>
+        <div class="link-box">
+          <code id="share-link">—</code>
+          <button class="btn-secondary" id="copy-btn">Copy</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn-whatsapp" id="whatsapp-btn">Send via WhatsApp</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Your tracking links</h2>
+        <ul class="session-list" id="session-list"></ul>
+        <div class="empty-state" id="session-empty">No tracking links yet — generate one above.</div>
+      </section>
+    </div>
+
+    <div>
+      <div class="status-banner" id="status-banner" hidden></div>
+      <div id="map"></div>
+      <div class="stat-row" id="stat-row" hidden>
+        <div class="stat"><div class="label">Status</div><div class="value" id="stat-status">—</div></div>
+        <div class="stat"><div class="label">Distance remaining</div><div class="value" id="stat-distance">—</div></div>
+        <div class="stat"><div class="label">ETA</div><div class="value" id="stat-eta">—</div></div>
+        <div class="stat"><div class="label">Last update</div><div class="value" id="stat-updated">—</div></div>
+      </div>
+      <div class="btn-row" id="session-actions" hidden>
+        <button class="btn-danger" id="close-session-btn">Close this trip</button>
+        <button class="btn-secondary" id="remove-session-btn">Remove from my list</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="foot">Locations are only shared after the recipient explicitly agrees. Links expire automatically after 24 hours.</footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>
