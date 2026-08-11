@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <application
+        android:name=".TrackerApplication"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Tracker">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.Tracker">
+
+            <!-- App launcher entry: opens the sender ("create a trip") screen. -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!--
+              Tracking links share the same https URL as the web app (web/track.html), so a link
+              pasted into WhatsApp is always a real, tappable https link. If this app is
+              installed and Digital Asset Links verification succeeds (see
+              web/.well-known/assetlinks.json and trackerapp/README.md), Android opens this
+              screen directly instead of a browser tab. If the app isn't installed, or
+              verification hasn't been set up yet, the same link still works fine as a normal
+              web page.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="${trackingWebHost}"
+                    android:pathPrefix="/track.html" />
+            </intent-filter>
+
+            <!-- Optional custom-scheme link, handy for local testing without hosting/asset-link
+                 setup, e.g.: adb shell am start -a android.intent.action.VIEW \
+                 -d "yallamuvtracker://track?id=SESSION_ID" -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="yallamuvtracker" android:host="track" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
