@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Share your location</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo">📍</div>
+    <div>
+      <h1>Live Tracking</h1>
+      <div class="sub" id="topbar-sub">Loading…</div>
+    </div>
+  </header>
+
+  <main>
+    <div id="loading-state" class="card consent-card">
+      <div class="icon">⏳</div>
+      <p>Loading trip details…</p>
+    </div>
+
+    <div id="error-state" class="card consent-card" hidden>
+      <div class="icon">⚠️</div>
+      <h2 id="error-title">Link unavailable</h2>
+      <p id="error-message"></p>
+    </div>
+
+    <div id="consent-state" class="card consent-card" hidden>
+      <div class="icon">🚚</div>
+      <h2 id="consent-title">Someone wants to track this trip</h2>
+      <p>
+        <span id="consent-label"></span>
+        Destination: <span class="dest" id="consent-dest"></span>
+      </p>
+      <p>If you agree, your live location will be shared until you stop sharing, you arrive, or the link expires (24 hours).</p>
+      <div class="btn-row">
+        <button class="btn-primary" id="share-btn">Share my location</button>
+        <button class="btn-secondary" id="decline-btn">No thanks</button>
+      </div>
+      <div class="privacy-note">
+        Your location is only visible to whoever holds this link. You can stop sharing at any time.
+      </div>
+    </div>
+
+    <div id="active-state" hidden>
+      <div class="status-banner ok" id="active-banner">You're sharing your live location.</div>
+      <div id="map"></div>
+      <div class="stat-row">
+        <div class="stat"><div class="label">Distance to destination</div><div class="value" id="stat-distance">—</div></div>
+        <div class="stat"><div class="label">ETA</div><div class="value" id="stat-eta">—</div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-danger" id="stop-btn">Stop sharing</button>
+      </div>
+    </div>
+
+    <div id="declined-state" class="card consent-card" hidden>
+      <div class="icon">🙈</div>
+      <h2>Okay, no location was shared</h2>
+      <p>You can close this page.</p>
+    </div>
+
+    <div id="arrived-state" class="card consent-card" hidden>
+      <div class="icon">🎉</div>
+      <h2>You've arrived!</h2>
+      <p>Location sharing has stopped automatically.</p>
+    </div>
+
+    <div id="closed-state" class="card consent-card" hidden>
+      <div class="icon">✅</div>
+      <h2>This trip has ended</h2>
+      <p>Location sharing is no longer active for this link.</p>
+    </div>
+  </main>
+
+  <footer class="foot">Powered by Yalla Muv Tracking</footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="js/track.js"></script>
+</body>
+</html>

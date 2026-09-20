@@ -25,3 +25,4 @@ dependencyResolutionManagement {
 rootProject.name = "Yalla Muv"
 
 include(":app")
+include(":trackerapp")
