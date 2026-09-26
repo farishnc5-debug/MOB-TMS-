@@ -12,26 +12,18 @@
     <div class="logo">📍</div>
     <div>
       <h1>Live Tracking</h1>
-      <div class="sub">Set a destination, send a link, watch them arrive</div>
+      <div class="sub">Name a link, send it, watch their pin move</div>
     </div>
   </header>
 
   <main class="dashboard-layout">
     <div style="display:flex; flex-direction:column; gap:14px;">
       <section class="card">
-        <h2>1. Set the destination</h2>
-        <label for="dest-search">Search for an address</label>
-        <input type="text" id="dest-search" placeholder="e.g. King Abdulaziz Rd, Jeddah" autocomplete="off" />
-        <ul class="suggestions" id="dest-suggestions" hidden></ul>
-        <div class="empty-state" id="dest-hint">Or click/tap directly on the map to drop a pin.</div>
-        <div class="link-box" id="dest-chosen" hidden>
-          <span id="dest-label">—</span>
-        </div>
+        <h2>1. Name this link</h2>
+        <label for="trip-label">Who or what is this for?</label>
+        <input type="text" id="trip-label" placeholder="e.g. Ahmed, or Driver #3" autocomplete="off" />
 
-        <label for="trip-label">Trip label (optional)</label>
-        <input type="text" id="trip-label" placeholder="e.g. Delivery to Ahmed" />
-
-        <label for="recipient-phone">Recipient's WhatsApp number (optional)</label>
+        <label for="recipient-phone">Their WhatsApp number (optional)</label>
         <input type="tel" id="recipient-phone" placeholder="e.g. 9665XXXXXXXX (with country code)" />
 
         <div class="btn-row">
@@ -62,12 +54,12 @@
       <div id="map"></div>
       <div class="stat-row" id="stat-row" hidden>
         <div class="stat"><div class="label">Status</div><div class="value" id="stat-status">—</div></div>
-        <div class="stat"><div class="label">Distance remaining</div><div class="value" id="stat-distance">—</div></div>
-        <div class="stat"><div class="label">ETA</div><div class="value" id="stat-eta">—</div></div>
         <div class="stat"><div class="label">Last update</div><div class="value" id="stat-updated">—</div></div>
+        <div class="stat"><div class="label">Near</div><div class="value" id="stat-address">—</div></div>
       </div>
       <div class="btn-row" id="session-actions" hidden>
-        <button class="btn-danger" id="close-session-btn">Close this trip</button>
+        <a class="btn-secondary" id="gmaps-link" href="#" target="_blank" rel="noopener">Open in Google Maps</a>
+        <button class="btn-danger" id="close-session-btn">Close this link</button>
         <button class="btn-secondary" id="remove-session-btn">Remove from my list</button>
       </div>
     </div>

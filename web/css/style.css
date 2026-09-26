@@ -114,25 +114,7 @@ input[type="text"], input[type="tel"] {
 
 input:focus { outline: 2px solid var(--blue); }
 
-.suggestions {
-  list-style: none;
-  margin: 6px 0 0;
-  padding: 0;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-.suggestions li {
-  padding: 9px 12px;
-  background: var(--panel-2);
-  font-size: 13px;
-  cursor: pointer;
-  border-bottom: 1px solid var(--border);
-}
-.suggestions li:last-child { border-bottom: none; }
-.suggestions li:hover { background: #263850; }
-
-button {
+button, .btn-row a {
   font: inherit;
   cursor: pointer;
   border: none;
@@ -140,6 +122,9 @@ button {
   padding: 11px 16px;
   font-weight: 600;
   font-size: 14px;
+  text-decoration: none;
+  text-align: center;
+  display: inline-block;
 }
 
 .btn-primary { background: var(--blue); color: white; width: 100%; }
@@ -165,7 +150,7 @@ button {
 .btn-danger { background: transparent; color: var(--red); border: 1px solid var(--red); }
 
 .btn-row { display: flex; gap: 8px; margin-top: 10px; }
-.btn-row button { flex: 1; }
+.btn-row button, .btn-row a { flex: 1; }
 
 .link-box {
   display: flex;
@@ -207,7 +192,6 @@ button {
 }
 .badge-pending { background: #3a3320; color: var(--amber); }
 .badge-active { background: #163a24; color: var(--accent); }
-.badge-arrived { background: #163a24; color: var(--accent); }
 .badge-declined { background: #3a1f1f; color: var(--red); }
 .badge-closed { background: #2a3140; color: var(--muted); }
 
@@ -240,7 +224,6 @@ button {
 .consent-card .icon { font-size: 40px; margin-bottom: 6px; }
 .consent-card h2 { color: var(--text); font-size: 20px; text-transform: none; letter-spacing: normal; }
 .consent-card p { color: var(--muted); font-size: 14px; line-height: 1.5; }
-.consent-card .dest { font-weight: 600; color: var(--text); }
 
 .privacy-note {
   font-size: 12px;

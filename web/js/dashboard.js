@@ -9,15 +9,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
   generateSessionId,
-  geocode,
   reverseGeocode,
-  getRoute,
-  formatDistance,
-  formatDuration,
-  formatEta,
   timeAgo,
-  haversineMeters,
   buildTrackingUrl,
+  buildGoogleMapsUrl,
   buildWhatsAppUrl,
 } from "./utils.js";
 
@@ -25,10 +20,6 @@ const STORAGE_KEY = "ynm_tracking_sessions";
 const DEFAULT_CENTER = [21.4858, 39.1925]; // Jeddah, KSA
 
 // ---- DOM ----
-const destSearch = document.getElementById("dest-search");
-const destSuggestions = document.getElementById("dest-suggestions");
-const destChosen = document.getElementById("dest-chosen");
-const destLabel = document.getElementById("dest-label");
 const tripLabelInput = document.getElementById("trip-label");
 const phoneInput = document.getElementById("recipient-phone");
 const generateBtn = document.getElementById("generate-btn");
@@ -41,10 +32,10 @@ const sessionEmptyEl = document.getElementById("session-empty");
 const statusBanner = document.getElementById("status-banner");
 const statRow = document.getElementById("stat-row");
 const statStatus = document.getElementById("stat-status");
-const statDistance = document.getElementById("stat-distance");
-const statEta = document.getElementById("stat-eta");
 const statUpdated = document.getElementById("stat-updated");
+const statAddress = document.getElementById("stat-address");
 const sessionActions = document.getElementById("session-actions");
+const gmapsLink = document.getElementById("gmaps-link");
 const closeSessionBtn = document.getElementById("close-session-btn");
 const removeSessionBtn = document.getElementById("remove-session-btn");
 
@@ -55,96 +46,29 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
 }).addTo(map);
 
-const destIcon = L.divIcon({
-  html: "🏁",
-  className: "emoji-icon",
-  iconSize: [28, 28],
-});
 const liveIcon = L.divIcon({
   html: "🟢",
   className: "emoji-icon",
   iconSize: [22, 22],
 });
 
-let pickerMarker = null; // marker used while choosing a new destination
-let chosenDestination = null; // {lat, lng, address}
-
-let focusDestMarker = null; // destination marker for the currently-viewed session
-let focusLiveMarker = null; // recipient marker for the currently-viewed session
-let focusRouteLine = null;
-
-// ---- Destination picking ----
-map.on("click", async (e) => {
-  const { lat, lng } = e.latlng;
-  setPickerMarker(lat, lng);
-  destLabel.textContent = "Looking up address…";
-  destChosen.hidden = false;
-  const address = (await reverseGeocode(lat, lng)) || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-  chosenDestination = { lat, lng, address };
-  destLabel.textContent = address;
-  generateBtn.disabled = false;
-});
-
-function setPickerMarker(lat, lng) {
-  if (pickerMarker) map.removeLayer(pickerMarker);
-  pickerMarker = L.marker([lat, lng], { icon: destIcon }).addTo(map);
-}
-
-let searchTimer = null;
-destSearch.addEventListener("input", () => {
-  clearTimeout(searchTimer);
-  const q = destSearch.value;
-  if (q.trim().length < 3) {
-    destSuggestions.hidden = true;
-    destSuggestions.innerHTML = "";
-    return;
-  }
-  searchTimer = setTimeout(async () => {
-    try {
-      const results = await geocode(q);
-      renderSuggestions(results);
-    } catch {
-      destSuggestions.hidden = true;
-    }
-  }, 400);
-});
-
-function renderSuggestions(results) {
-  destSuggestions.innerHTML = "";
-  if (!results.length) {
-    destSuggestions.hidden = true;
-    return;
-  }
-  for (const r of results) {
-    const li = document.createElement("li");
-    li.textContent = r.label;
-    li.addEventListener("click", () => {
-      chosenDestination = { lat: r.lat, lng: r.lng, address: r.label };
-      setPickerMarker(r.lat, r.lng);
-      map.setView([r.lat, r.lng], 15);
-      destLabel.textContent = r.label;
-      destChosen.hidden = false;
-      destSuggestions.hidden = true;
-      destSearch.value = "";
-      generateBtn.disabled = false;
-    });
-    destSuggestions.appendChild(li);
-  }
-  destSuggestions.hidden = false;
-}
+let focusLiveMarker = null;
 
 // ---- Generate link ----
+tripLabelInput.addEventListener("input", () => {
+  generateBtn.disabled = tripLabelInput.value.trim().length === 0;
+});
+
 generateBtn.addEventListener("click", async () => {
-  if (!chosenDestination) return;
+  const label = tripLabelInput.value.trim();
+  if (!label) return;
   generateBtn.disabled = true;
   generateBtn.textContent = "Generating…";
   try {
     const id = generateSessionId();
     const expiresAt = Timestamp.fromDate(new Date(Date.now() + 24 * 3600 * 1000));
-    const label = tripLabelInput.value.trim() || null;
 
     await setDoc(doc(db, "tracking_sessions", id), {
-      destination: chosenDestination,
       label,
       createdAt: serverTimestamp(),
       expiresAt,
@@ -157,10 +81,10 @@ generateBtn.addEventListener("click", async () => {
     shareLink.textContent = url;
     shareCard.hidden = false;
 
-    const message = `Hi! ${label ? `For "${label}", ` : ""}please share your live location so I can track your trip to ${chosenDestination.address} and see your estimated arrival time. Your location is only shared after you agree: ${url}`;
+    const message = `Hi! For "${label}", please share your live location with me. Your location is only shared after you agree: ${url}`;
     whatsappBtn.onclick = () => window.open(buildWhatsAppUrl(message, phoneInput.value), "_blank");
 
-    saveSessionLocally({ id, label: label || chosenDestination.address, createdAt: Date.now() });
+    saveSessionLocally({ id, label, createdAt: Date.now() });
     subscribeSession(id);
     renderSessionList();
     selectSession(id);
@@ -168,7 +92,7 @@ generateBtn.addEventListener("click", async () => {
     alert("Could not generate the tracking link. Check your Firebase setup (web/js/firebase-config.js) and try again.");
     console.error(err);
   } finally {
-    generateBtn.disabled = false;
+    generateBtn.disabled = tripLabelInput.value.trim().length === 0;
     generateBtn.textContent = "Generate tracking link";
   }
 });
@@ -199,7 +123,7 @@ function removeSessionLocally(id) {
 
 const sessionData = new Map(); // id -> latest Firestore data (or null if deleted/missing)
 const unsubscribers = new Map(); // id -> unsubscribe fn
-const routeCache = new Map(); // id -> { lat, lng, time, result }
+const addressCache = new Map(); // id -> { lat, lng, time, address }
 let selectedSessionId = null;
 
 function subscribeSession(id) {
@@ -227,8 +151,16 @@ function renderSessionList() {
     const li = document.createElement("li");
     li.className = "session-item" + (entry.id === selectedSessionId ? " active" : "");
 
-    const status = data === null ? "expired" : data.status;
-    const badge = `<span class="badge badge-${status}">${status}</span>`;
+    // `data` is `undefined` until this session's Firestore listener delivers its first
+    // snapshot (always at least one microtask away, even from cache) - show a neutral
+    // placeholder for that brief gap rather than assuming it's already loaded or missing.
+    const badge =
+      data === undefined
+        ? `<span class="badge">…</span>`
+        : (() => {
+            const status = data === null ? "expired" : data.status;
+            return `<span class="badge badge-${status}">${status}</span>`;
+          })();
 
     li.innerHTML = `
       <div class="row1">
@@ -258,6 +190,13 @@ async function renderFocusedSession(id) {
   const data = sessionData.get(id);
   clearFocusLayers();
 
+  if (data === undefined) {
+    setBanner("Loading…", "");
+    statRow.hidden = true;
+    sessionActions.hidden = true;
+    return;
+  }
+
   if (data === null) {
     setBanner("This tracking link has expired or was removed.", "warn");
     statRow.hidden = true;
@@ -269,17 +208,13 @@ async function renderFocusedSession(id) {
   closeSessionBtn.hidden = !["pending", "active"].includes(data.status);
   statRow.hidden = false;
 
-  const dest = data.destination;
-  focusDestMarker = L.marker([dest.lat, dest.lng], { icon: destIcon }).addTo(map).bindPopup(dest.address);
-
   const bannerText = {
-    pending: "Waiting for the recipient to open the link and agree to share their location.",
-    active: "Recipient is sharing their live location.",
-    declined: "Recipient declined to share their location.",
-    closed: "This trip was closed.",
-    arrived: "Recipient has arrived at the destination.",
+    pending: "Waiting for them to open the link and agree to share their location.",
+    active: "They're sharing their live location.",
+    declined: "They declined to share their location.",
+    closed: "This link was closed.",
   }[data.status] || "";
-  const bannerClass = { pending: "warn", active: "ok", arrived: "ok", declined: "error", closed: "" }[data.status] || "";
+  const bannerClass = { pending: "warn", active: "ok", declined: "error", closed: "" }[data.status] || "";
   setBanner(bannerText, bannerClass);
 
   statStatus.textContent = data.status;
@@ -287,41 +222,34 @@ async function renderFocusedSession(id) {
 
   if (data.location) {
     const { lat, lng } = data.location;
-    focusLiveMarker = L.marker([lat, lng], { icon: liveIcon }).addTo(map).bindPopup("Recipient");
-    map.fitBounds(L.latLngBounds([[lat, lng], [dest.lat, dest.lng]]), { padding: [40, 40] });
+    focusLiveMarker = L.marker([lat, lng], { icon: liveIcon }).addTo(map).bindPopup(escapeHtml(data.label || "Live location"));
+    map.setView([lat, lng], 15);
+    gmapsLink.hidden = false;
+    gmapsLink.href = buildGoogleMapsUrl(lat, lng);
 
-    const cached = routeCache.get(id);
-    const moved = !cached || haversineMeters(cached.lat, cached.lng, lat, lng) > 40;
+    const cached = addressCache.get(id);
+    const moved = !cached || Math.hypot(cached.lat - lat, cached.lng - lng) > 0.0005;
     const stale = !cached || Date.now() - cached.time > 25000;
     if (moved || stale) {
-      routeCache.set(id, { lat, lng, time: Date.now(), result: null });
-      const route = await getRoute(lat, lng, dest.lat, dest.lng);
+      addressCache.set(id, { lat, lng, time: Date.now(), address: cached?.address || "…" });
+      statAddress.textContent = cached?.address || "…";
+      const address = await reverseGeocode(lat, lng);
       if (selectedSessionId !== id) return; // user navigated away while awaiting
-      routeCache.set(id, { lat, lng, time: Date.now(), result: route });
-      applyRoute(route);
+      addressCache.set(id, { lat, lng, time: Date.now(), address: address || "—" });
+      statAddress.textContent = address || "—";
     } else {
-      applyRoute(cached.result);
+      statAddress.textContent = cached.address;
     }
   } else {
-    map.setView([dest.lat, dest.lng], 13);
-    statDistance.textContent = "—";
-    statEta.textContent = "—";
+    map.setView(DEFAULT_CENTER, 12);
+    statAddress.textContent = "—";
+    gmapsLink.hidden = true;
   }
 }
 
-function applyRoute(route) {
-  if (!route) return;
-  if (focusRouteLine) map.removeLayer(focusRouteLine);
-  focusRouteLine = L.polyline(route.coords, { color: "#4f8cff", weight: 4 }).addTo(map);
-  statDistance.textContent = formatDistance(route.distanceMeters);
-  statEta.textContent = `${formatDuration(route.durationSeconds)} (≈ ${formatEta(route.durationSeconds)})`;
-}
-
 function clearFocusLayers() {
-  if (focusDestMarker) map.removeLayer(focusDestMarker);
   if (focusLiveMarker) map.removeLayer(focusLiveMarker);
-  if (focusRouteLine) map.removeLayer(focusRouteLine);
-  focusDestMarker = focusLiveMarker = focusRouteLine = null;
+  focusLiveMarker = null;
 }
 
 function setBanner(text, cls) {
@@ -350,7 +278,7 @@ removeSessionBtn.addEventListener("click", () => {
   if (unsub) unsub();
   unsubscribers.delete(id);
   sessionData.delete(id);
-  routeCache.delete(id);
+  addressCache.delete(id);
   removeSessionLocally(id);
   if (selectedSessionId === id) {
     selectedSessionId = null;
@@ -363,4 +291,5 @@ removeSessionBtn.addEventListener("click", () => {
 });
 
 // ---- Init ----
+generateBtn.disabled = tripLabelInput.value.trim().length === 0;
 renderSessionList();

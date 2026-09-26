@@ -19,7 +19,7 @@
   <main>
     <div id="loading-state" class="card consent-card">
       <div class="icon">⏳</div>
-      <p>Loading trip details…</p>
+      <p>Loading link details…</p>
     </div>
 
     <div id="error-state" class="card consent-card" hidden>
@@ -29,13 +29,10 @@
     </div>
 
     <div id="consent-state" class="card consent-card" hidden>
-      <div class="icon">🚚</div>
-      <h2 id="consent-title">Someone wants to track this trip</h2>
-      <p>
-        <span id="consent-label"></span>
-        Destination: <span class="dest" id="consent-dest"></span>
-      </p>
-      <p>If you agree, your live location will be shared until you stop sharing, you arrive, or the link expires (24 hours).</p>
+      <div class="icon">📍</div>
+      <h2 id="consent-title">Someone wants to see your live location</h2>
+      <p id="consent-label"></p>
+      <p>If you agree, your live location will be shared until you stop sharing or the link expires (24 hours).</p>
       <div class="btn-row">
         <button class="btn-primary" id="share-btn">Share my location</button>
         <button class="btn-secondary" id="decline-btn">No thanks</button>
@@ -48,10 +45,6 @@
     <div id="active-state" hidden>
       <div class="status-banner ok" id="active-banner">You're sharing your live location.</div>
       <div id="map"></div>
-      <div class="stat-row">
-        <div class="stat"><div class="label">Distance to destination</div><div class="value" id="stat-distance">—</div></div>
-        <div class="stat"><div class="label">ETA</div><div class="value" id="stat-eta">—</div></div>
-      </div>
       <div class="btn-row">
         <button class="btn-danger" id="stop-btn">Stop sharing</button>
       </div>
@@ -63,15 +56,9 @@
       <p>You can close this page.</p>
     </div>
 
-    <div id="arrived-state" class="card consent-card" hidden>
-      <div class="icon">🎉</div>
-      <h2>You've arrived!</h2>
-      <p>Location sharing has stopped automatically.</p>
-    </div>
-
     <div id="closed-state" class="card consent-card" hidden>
       <div class="icon">✅</div>
-      <h2>This trip has ended</h2>
+      <h2>This link has ended</h2>
       <p>Location sharing is no longer active for this link.</p>
     </div>
   </main>

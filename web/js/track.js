@@ -5,13 +5,22 @@ import {
   updateDoc,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-import { getRoute, formatDistance, formatDuration, formatEta, haversineMeters } from "./utils.js";
 
-const ARRIVAL_RADIUS_METERS = 150;
 const MIN_UPDATE_INTERVAL_MS = 8000;
 const MIN_UPDATE_DISTANCE_METERS = 15;
 
-const states = ["loading", "error", "consent", "active", "declined", "arrived", "closed"];
+function haversineMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+const states = ["loading", "error", "consent", "active", "declined", "closed"];
 function showState(name) {
   for (const s of states) {
     document.getElementById(`${s}-state`).hidden = s !== name;
@@ -22,10 +31,9 @@ const params = new URLSearchParams(window.location.search);
 const sessionId = params.get("id");
 const sessionRef = sessionId ? doc(db, "tracking_sessions", sessionId) : null;
 
-let destination = null;
 let watchId = null;
 let lastSent = { lat: null, lng: null, time: 0 };
-let map, liveMarker, destMarker, routeLine;
+let map, liveMarker;
 
 async function init() {
   if (!sessionId) {
@@ -41,7 +49,7 @@ async function init() {
   } catch (err) {
     console.error(err);
     showState("error");
-    document.getElementById("error-title").textContent = "Couldn't load this trip";
+    document.getElementById("error-title").textContent = "Couldn't load this link";
     document.getElementById("error-message").textContent =
       "Check your connection, or the sender's Firebase project may not be set up yet.";
     return;
@@ -55,7 +63,6 @@ async function init() {
   }
 
   const data = snap.data();
-  destination = data.destination;
 
   if (data.expiresAt && data.expiresAt.toDate() < new Date()) {
     showState("error");
@@ -64,11 +71,10 @@ async function init() {
     return;
   }
 
-  document.getElementById("topbar-sub").textContent = data.label || "Live trip tracking";
+  document.getElementById("topbar-sub").textContent = data.label || "Live tracking";
 
   if (data.status === "declined") return showState("declined");
   if (data.status === "closed") return showState("closed");
-  if (data.status === "arrived") return showState("arrived");
 
   if (data.status === "active") {
     startSharing(true);
@@ -76,8 +82,9 @@ async function init() {
   }
 
   // status === "pending"
-  document.getElementById("consent-label").textContent = data.label ? `For "${data.label}", ` : "";
-  document.getElementById("consent-dest").textContent = destination.address;
+  document.getElementById("consent-label").textContent = data.label
+    ? `They named this link "${data.label}".`
+    : "";
   showState("consent");
 
   document.getElementById("share-btn").addEventListener("click", () => startSharing(false));
@@ -93,19 +100,16 @@ async function decline() {
   showState("declined");
 }
 
-function initMap() {
-  map = L.map("map").setView([destination.lat, destination.lng], 13);
+function initMap(lat, lng) {
+  map = L.map("map").setView([lat, lng], 15);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "&copy; OpenStreetMap contributors",
     maxZoom: 19,
   }).addTo(map);
-  const destIcon = L.divIcon({ html: "🏁", className: "emoji-icon", iconSize: [28, 28] });
-  destMarker = L.marker([destination.lat, destination.lng], { icon: destIcon }).addTo(map);
 }
 
 function startSharing(alreadyActive) {
   showState("active");
-  if (!map) initMap();
 
   if (!navigator.geolocation) {
     document.getElementById("active-banner").textContent =
@@ -156,15 +160,14 @@ function toLocationPayload(pos) {
 async function handlePosition(pos) {
   const { latitude: lat, longitude: lng } = pos.coords;
 
+  if (!map) initMap(lat, lng);
   if (!liveMarker) {
     const icon = L.divIcon({ html: "🟢", className: "emoji-icon", iconSize: [22, 22] });
     liveMarker = L.marker([lat, lng], { icon }).addTo(map);
   } else {
     liveMarker.setLatLng([lat, lng]);
   }
-  map.fitBounds(L.latLngBounds([[lat, lng], [destination.lat, destination.lng]]), { padding: [40, 40] });
-
-  const distToDest = haversineMeters(lat, lng, destination.lat, destination.lng);
+  map.panTo([lat, lng]);
 
   const now = Date.now();
   const movedEnough =
@@ -178,30 +181,7 @@ async function handlePosition(pos) {
     } catch (err) {
       console.error(err);
     }
-
-    const route = await getRoute(lat, lng, destination.lat, destination.lng);
-    if (route) {
-      if (routeLine) map.removeLayer(routeLine);
-      routeLine = L.polyline(route.coords, { color: "#4f8cff", weight: 4 }).addTo(map);
-      document.getElementById("stat-distance").textContent = formatDistance(route.distanceMeters);
-      document.getElementById("stat-eta").textContent = `${formatDuration(route.durationSeconds)} (≈ ${formatEta(route.durationSeconds)})`;
-    }
   }
-
-  if (distToDest < ARRIVAL_RADIUS_METERS) {
-    await markArrived();
-  }
-}
-
-async function markArrived() {
-  if (watchId != null) navigator.geolocation.clearWatch(watchId);
-  watchId = null;
-  try {
-    await updateDoc(sessionRef, { status: "arrived" });
-  } catch (err) {
-    console.error(err);
-  }
-  showState("arrived");
 }
 
 async function stopSharing() {

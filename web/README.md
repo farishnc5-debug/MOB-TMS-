@@ -2,26 +2,26 @@
 
 A small standalone web app, separate from the Yalla Muv Android app in this repo, that lets you:
 
-1. Pick a destination on a map.
-2. Generate a one-time tracking link.
-3. Send that link to anyone on WhatsApp.
-4. Once they open it and tap **Share my location**, watch their live position on your
-   dashboard map, with distance remaining and an ETA that updates as they move.
+1. Name a tracking link (e.g. "Ahmed" or "Driver #3") and generate it.
+2. Send that link to anyone, any way you like — WhatsApp, SMS, email, whatever.
+3. Once they open it and tap **Share my location**, watch their live position on your
+   dashboard map, like a pin on Google Maps, updating as they move.
 
 Two pages:
 
-- `index.html` — your dashboard: set the destination, generate/send the link, watch the map.
+- `index.html` — your dashboard: name a link, generate/send it, watch the map.
 - `track.html` — what the recipient opens: a consent screen, then (only if they agree) their
-  live location is shared until they stop, arrive, or the link expires (24h).
+  live location is shared until they stop sharing or the link expires (24h).
 
-No accounts, no app install for the recipient, no paid API keys. It uses:
+No accounts, no app install for the recipient, no paid API keys, no destination or route to
+set up — just a name and a live pin. It uses:
 
 - **Firebase Firestore** (free "Spark" tier is enough) to relay location updates in real time.
 - **Firebase Hosting** to serve the two pages over HTTPS (required — browsers only allow the
   location permission prompt on secure origins).
-- **Leaflet + OpenStreetMap** for the map, and the **public OSRM** routing server for
-  directions/ETA. Both are free and keyless, but rate-limited — fine for personal/small-team
-  use; if you outgrow them, swap in a paid routing provider in `web/js/utils.js#getRoute`.
+- **Leaflet + OpenStreetMap** for the map. Free and keyless. Reverse geocoding (showing a
+  readable address under a pin) uses the free Nominatim service — purely cosmetic, so nothing
+  breaks if it's ever unavailable.
 
 ## One-time setup
 
@@ -55,18 +55,18 @@ Re-run the same command any time you change files under `web/` or `firestore.rul
 
 There are no logins. Each tracking link's id is a long random token
 (`web/js/utils.js#generateSessionId`) — knowing the id is what authorizes reading/updating
-that one trip, the same trust model as "anyone with this link" location-sharing features in
+that one link, the same trust model as "anyone with this link" location-sharing features in
 other consumer apps. `firestore.rules` enforces, for every session, regardless of who holds
 the link:
 
 - No one can list/enumerate sessions (only direct-by-id reads work), so links can't be
   guessed by scanning the database.
-- No one can delete a session or change its destination/label after creation.
-- Once a trip is `declined`, `closed`, or `arrived`, it can never be reopened or written to
-  again by anyone.
+- No one can delete a session or change its name/label after creation.
+- Once a link is `declined` or `closed`, it can never be reopened or written to again by
+  anyone.
 - Writes stop being accepted once `expiresAt` (24h after creation) passes.
 
-If you need stronger guarantees (e.g. only *you* can close a trip, not the recipient), add
+If you need stronger guarantees (e.g. only *you* can close a link, not the recipient), add
 Firebase Authentication for the sender side — that's a natural next step but out of scope
 for this first version.
 
@@ -77,9 +77,9 @@ for this first version.
   from a different browser/device gives you a separate list. If you need one shared dashboard
   across devices, add Firebase Auth and a per-user sessions collection.
 - **Location only updates while the recipient's tab is open and in the foreground** — this is
-  a browser limitation (Background geolocation on the web is intentionally restricted), not
+  a browser limitation (background geolocation on the web is intentionally restricted), not
   something this app can work around. For always-on background tracking you'd need a native
   app with location permissions, not a web page.
-- **OpenStreetMap Nominatim / public OSRM** are shared, rate-limited public services intended
-  for light use. If you see search or ETA calls failing under heavier traffic, switch to a
-  paid geocoding/routing provider (e.g. Mapbox, Google Maps Platform, or a self-hosted OSRM).
+- **OpenStreetMap Nominatim** is a shared, rate-limited public service intended for light use.
+  If reverse-geocoded addresses stop showing up under heavier traffic, that's expected — the
+  pin's raw coordinates and the "Open in Google Maps" link keep working regardless.
