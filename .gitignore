@@ -16,3 +16,8 @@
 local.properties
 .env
 debug.keystore
+
+# forecast-service (Python)
+forecast-service/__pycache__/
+forecast-service/.venv/
+forecast-service/*.pyc

@@ -63,6 +63,7 @@ class MainActivity : ComponentActivity() {
 
                 val aiParsingState by viewModel.aiParsingState.collectAsStateWithLifecycle()
                 val aiChatHistory by viewModel.aiChatHistory.collectAsStateWithLifecycle()
+                val forecastState by viewModel.forecastState.collectAsStateWithLifecycle()
 
                 var currentTab by remember { mutableStateOf("DASHBOARD") }
 
@@ -85,6 +86,7 @@ class MainActivity : ComponentActivity() {
                     TabItem("OPS", "${Localization.getString("tab_ops", selectedLanguage)} (${operations.count { it.status != "Finished" }})", Icons.AutoMirrored.Filled.AltRoute),
                     TabItem("VENDORS", Localization.getString("tab_vendors", selectedLanguage), Icons.Default.Badge),
                     TabItem("INVOICES", Localization.getString("tab_invoices", selectedLanguage), Icons.AutoMirrored.Filled.ReceiptLong),
+                    TabItem("FORECAST", Localization.getString("tab_forecast", selectedLanguage), Icons.Default.AutoGraph),
                     TabItem("HOW_TO_USE", Localization.getString("tab_how_to_use", selectedLanguage), Icons.AutoMirrored.Filled.Help)
                 )
 
@@ -320,6 +322,13 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onSendAiChat = { query ->
                                     viewModel.sendAiChatQuery(query)
+                                }
+                            )
+
+                            "FORECAST" -> ForecastScreen(
+                                forecastState = forecastState,
+                                onRunForecast = { hub, horizonDays ->
+                                    viewModel.runDemandForecast(hub, horizonDays)
                                 }
                             )
 

@@ -1,0 +1,5 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.4
+numpy>=1.26
+timesfm[torch]>=2.5.0,<3.0.0
