@@ -8,11 +8,16 @@ A small standalone web app, separate from the Yalla Muv Android app in this repo
 4. Once they open it and tap **Share my location**, watch their live position on your
    dashboard map, with distance remaining and an ETA that updates as they move.
 
-Two pages:
+Three pages:
 
+- `login.html` — sign in (or create an operator account) to reach the dashboard. Styled after
+  the accounts.zoho.com design system: light surfaces, purple primary CTA, blue accents,
+  square bordered inputs, 4px spacing rhythm.
 - `index.html` — your dashboard: set the destination, generate/send the link, watch the map.
+  Gated behind sign-in — signed-out visitors are redirected to `login.html`.
 - `track.html` — what the recipient opens: a consent screen, then (only if they agree) their
-  live location is shared until they stop, arrive, or the link expires (24h).
+  live location is shared until they stop, arrive, or the link expires (24h). Stays public,
+  no account required, so anyone holding the link can respond to it.
 
 No accounts, no app install for the recipient, no paid API keys. It uses:
 
@@ -35,6 +40,10 @@ No accounts, no app install for the recipient, no paid API keys. It uses:
    design; access is controlled by `firestore.rules` instead.
 5. **Install the Firebase CLI** (once): `npm install -g firebase-tools`, then `firebase login`.
 6. From the repo root, run `firebase use --add` and pick the project you just created.
+7. **Enable sign-in**: in the console, Build → Authentication → Get started → Sign-in method →
+   enable **Email/Password**. The first person to use "Create an account" on `login.html`
+   becomes the first operator account; create teammates' accounts the same way, or add them
+   manually under Authentication → Users.
 
 ## Deploy
 
@@ -53,11 +62,12 @@ Re-run the same command any time you change files under `web/` or `firestore.rul
 
 ## How the security model works (read this before sharing widely)
 
-There are no logins. Each tracking link's id is a long random token
-(`web/js/utils.js#generateSessionId`) — knowing the id is what authorizes reading/updating
-that one trip, the same trust model as "anyone with this link" location-sharing features in
-other consumer apps. `firestore.rules` enforces, for every session, regardless of who holds
-the link:
+`login.html` gates *access to the dashboard UI* via Firebase Authentication — it's a sign-in
+wall for operators, not yet a rewrite of the data-layer trust model below. Each tracking
+link's id is still a long random token (`web/js/utils.js#generateSessionId`) — knowing the id
+is what authorizes reading/updating that one trip, the same trust model as "anyone with this
+link" location-sharing features in other consumer apps. `firestore.rules` enforces, for every
+session, regardless of who holds the link:
 
 - No one can list/enumerate sessions (only direct-by-id reads work), so links can't be
   guessed by scanning the database.
@@ -66,9 +76,10 @@ the link:
   again by anyone.
 - Writes stop being accepted once `expiresAt` (24h after creation) passes.
 
-If you need stronger guarantees (e.g. only *you* can close a trip, not the recipient), add
-Firebase Authentication for the sender side — that's a natural next step but out of scope
-for this first version.
+If you need stronger guarantees (e.g. only *you* can close a trip, not the recipient, or
+only signed-in operators can create sessions at all), tighten `firestore.rules` to require
+`request.auth != null` on the relevant operations — that's a natural next step but out of
+scope for this version.
 
 ## Notes and limits
 

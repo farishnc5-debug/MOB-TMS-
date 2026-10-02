@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign in — Yalla Muv TMS</title>
+  <link rel="stylesheet" href="css/auth.css" />
+</head>
+<body class="auth-body">
+  <header class="auth-topbar">
+    <div class="mark">Y</div>
+    <div class="brand">Yalla Muv TMS</div>
+  </header>
+
+  <main class="auth-main">
+    <div style="width:100%; max-width:360px;">
+      <div class="auth-card">
+        <div id="auth-banner" class="auth-banner"></div>
+
+        <!-- Step 1: identify -->
+        <section class="auth-step active" id="step-email">
+          <h1 id="title-signin">Sign in</h1>
+          <p class="lede">to access the dispatch dashboard</p>
+
+          <form id="form-email" novalidate>
+            <div class="auth-field" id="field-email">
+              <label for="input-email">Email address</label>
+              <input type="email" id="input-email" autocomplete="username" placeholder="you@company.com" required />
+              <div class="field-error">Enter a valid email address.</div>
+            </div>
+            <button type="submit" class="btn-primary" id="btn-next">Next</button>
+          </form>
+
+          <div class="auth-footnote">
+            <span id="toggle-label">New here?</span>
+            <button type="button" class="link-button" id="toggle-mode">Create an account</button>
+          </div>
+        </section>
+
+        <!-- Step 2: password -->
+        <section class="auth-step" id="step-password">
+          <h1 id="title-password">Sign in</h1>
+          <p class="lede" id="lede-password">Enter your password to continue</p>
+
+          <div class="identity-row">
+            <span class="email-value" id="identity-email">—</span>
+            <button type="button" class="link-button" id="change-email">Change</button>
+          </div>
+
+          <form id="form-password" novalidate>
+            <div class="auth-field" id="field-password">
+              <label for="input-password">Password</label>
+              <input type="password" id="input-password" autocomplete="current-password" required />
+              <div class="field-error">Enter your password.</div>
+            </div>
+
+            <div class="auth-field" id="field-confirm" style="display:none;">
+              <label for="input-confirm">Confirm password</label>
+              <input type="password" id="input-confirm" autocomplete="new-password" />
+              <div class="field-error">Passwords don't match.</div>
+            </div>
+
+            <div class="btn-row-between">
+              <span></span>
+              <button type="button" class="link-button" id="forgot-password">Forgot password?</button>
+            </div>
+
+            <button type="submit" class="btn-primary" id="btn-submit">Sign in</button>
+          </form>
+        </section>
+      </div>
+
+      <div class="privacy-note">
+        Your sign-in is protected and used only to secure access to the dispatch dashboard.
+        Recipient locations are only ever shared after they explicitly consent on their own device.
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="js/auth.js"></script>
+</body>
+</html>

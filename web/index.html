@@ -8,11 +8,17 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+  <div class="auth-gate" id="auth-gate">Checking your session…</div>
+
   <header class="topbar">
     <div class="logo">📍</div>
     <div>
       <h1>Live Tracking</h1>
       <div class="sub">Set a destination, send a link, watch them arrive</div>
+    </div>
+    <div class="topbar-user" id="topbar-user" hidden>
+      <span id="user-email"></span>
+      <button class="btn-signout" id="signout-btn">Sign out</button>
     </div>
   </header>
 
@@ -76,6 +82,7 @@
   <footer class="foot">Locations are only shared after the recipient explicitly agrees. Links expire automatically after 24 hours.</footer>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="js/auth-guard.js"></script>
   <script type="module" src="js/dashboard.js"></script>
 </body>
 </html>
