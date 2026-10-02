@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
 import com.example.data.model.*
+import com.example.data.remote.ForecastRepository
 import com.example.data.remote.GeminiRepository
 import com.example.data.remote.ParsedShipmentAiResult
 import com.example.util.ZatcaTlvEncoder
@@ -15,10 +16,25 @@ import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
 
+data class DailyVolume(val isoDate: String, val count: Int)
+
+data class ForecastDay(val isoDate: String, val point: Double, val low: Double, val high: Double)
+
+sealed interface ForecastUiState {
+    data object Idle : ForecastUiState
+    data object Loading : ForecastUiState
+    data class Success(val history: List<DailyVolume>, val forecast: List<ForecastDay>) : ForecastUiState
+    data class Error(val message: String) : ForecastUiState
+}
+
 class TmsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val dao = AppDatabase.getDatabase(application).tmsDao()
     private val geminiRepo = GeminiRepository()
+    private val forecastRepo = ForecastRepository()
+
+    private val operationDateFormat = SimpleDateFormat("MMMM d, yyyy", Locale.US)
+    private val isoDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
     // StateFlows from DB
     val clients: StateFlow<List<ClientEntity>> = dao.getAllClients()
@@ -60,6 +76,9 @@ class TmsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _aiChatHistory = MutableStateFlow<List<Pair<String, String>>>(emptyList())
     val aiChatHistory: StateFlow<List<Pair<String, String>>> = _aiChatHistory.asStateFlow()
+
+    private val _forecastState = MutableStateFlow<ForecastUiState>(ForecastUiState.Idle)
+    val forecastState: StateFlow<ForecastUiState> = _forecastState.asStateFlow()
 
     // Status names
     val statusStages = listOf(
@@ -348,6 +367,63 @@ class TmsViewModel(application: Application) : AndroidViewModel(application) {
             val updated = _aiChatHistory.value.toMutableList()
             updated.add("Gemini Copilot" to answer)
             _aiChatHistory.value = updated
+        }
+    }
+
+    // Demand Forecasting (TimesFM)
+    private fun buildDailyVolumeSeries(hub: String?): List<DailyVolume> {
+        val relevantOps = operations.value.filter { hub == null || it.originHub == hub }
+        val parsedDates = relevantOps.mapNotNull { op -> runCatching { operationDateFormat.parse(op.date) }.getOrNull() }
+        if (parsedDates.isEmpty()) return emptyList()
+
+        val countsByIsoDate = parsedDates.groupingBy { isoDateFormat.format(it) }.eachCount()
+        val sortedIsoDates = countsByIsoDate.keys.sorted()
+
+        val calendar = Calendar.getInstance().apply { time = isoDateFormat.parse(sortedIsoDates.first())!! }
+        val lastDate = isoDateFormat.parse(sortedIsoDates.last())!!
+
+        val series = mutableListOf<DailyVolume>()
+        while (!calendar.time.after(lastDate)) {
+            val iso = isoDateFormat.format(calendar.time)
+            series.add(DailyVolume(iso, countsByIsoDate[iso] ?: 0))
+            calendar.add(Calendar.DAY_OF_YEAR, 1)
+        }
+        return series
+    }
+
+    fun runDemandForecast(hub: String?, horizonDays: Int) {
+        viewModelScope.launch {
+            _forecastState.value = ForecastUiState.Loading
+
+            val history = buildDailyVolumeSeries(hub)
+            if (history.size < 4) {
+                _forecastState.value = ForecastUiState.Error(
+                    "Need at least 4 days of shipment history to forecast (found ${history.size})."
+                )
+                return@launch
+            }
+
+            val series = history.map { it.count.toDouble() }
+            forecastRepo.forecastDailyVolume(series, horizonDays).fold(
+                onSuccess = { response ->
+                    val calendar = Calendar.getInstance().apply { time = isoDateFormat.parse(history.last().isoDate)!! }
+                    val forecastDays = response.pointForecast.mapIndexed { index, point ->
+                        calendar.add(Calendar.DAY_OF_YEAR, 1)
+                        ForecastDay(
+                            isoDate = isoDateFormat.format(calendar.time),
+                            point = point,
+                            low = response.quantiles["q10"]?.getOrNull(index) ?: point,
+                            high = response.quantiles["q90"]?.getOrNull(index) ?: point
+                        )
+                    }
+                    _forecastState.value = ForecastUiState.Success(history, forecastDays)
+                },
+                onFailure = { e ->
+                    _forecastState.value = ForecastUiState.Error(
+                        e.localizedMessage ?: "Forecast request failed. Is forecast-service running?"
+                    )
+                }
+            )
         }
     }
 }

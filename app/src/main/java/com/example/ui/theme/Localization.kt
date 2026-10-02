@@ -19,6 +19,7 @@ object Localization {
             "tab_ops" -> if (isAr) "العمليات الشحنات" else "Operations"
             "tab_vendors" -> if (isAr) "الموردين والأسطول" else "Vendors"
             "tab_invoices" -> if (isAr) "الفواتير والذكاء الاصطناعي" else "Invoices & AI"
+            "tab_forecast" -> if (isAr) "توقع الطلب" else "Forecast"
             "tab_how_to_use" -> if (isAr) "كيفية الاستخدام" else "How to Use"
 
             // Buttons & Actions
